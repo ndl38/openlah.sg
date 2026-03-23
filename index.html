@@ -29,19 +29,22 @@
   .list { display: flex; flex-direction: column; gap: 2px; }
   .centre-row { width: 100%; padding: 14px 16px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; text-align: left; }
   .centre-row:active { background: #f0ede6; }
-  .centre-name { font-size: 13px; color: #1A1A1A; font-weight: 500; margin-bottom: 3px; }
-  .centre-meta { font-size: 11px; color: #999; }
+  .centre-name { font-size: 12px; color: #1A1A1A; font-weight: 500; margin-bottom: 3px; }
+  .centre-meta { font-size: 10px; color: #999; }
   .reports { font-size: 11px; color: #C84B2F; font-weight: 500; }
   .reports-sub { font-size: 10px; color: #999; margin-top: 2px; text-align: right; }
   .back-btn { font-size: 11px; color: #999; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px; display: block; }
   .centre-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #1A1A1A; margin-bottom: 4px; }
   .stall-row { padding: 14px 16px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .stall-row.ghost { opacity: 0.45; }
   .stall-name { font-size: 13px; color: #1A1A1A; font-weight: 500; margin-bottom: 3px; }
   .stall-meta { font-size: 11px; color: #ccc; }
   .badge { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; font-weight: 500; flex-shrink: 0; margin-left: 12px; }
   .badge.open { color: #2D6A4F; background: #D8F3DC; }
   .badge.closed { color: #9B2226; background: #FFE8E8; }
   .badge.unknown { color: #999; background: #EFEFEF; }
+  .confirm-btn { font-size: 10px; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 6px; border: 1.5px solid #E0DBD0; color: #999; background: #fff; font-family: 'DM Mono', monospace; flex-shrink: 0; margin-left: 8px; transition: all 0.15s; }
+  .confirm-btn:active { background: #F7F4EF; }
   .report-btn { width: 100%; padding: 14px 16px; background: transparent; border: 1.5px dashed #E0DBD0; border-radius: 10px; font-size: 12px; color: #bbb; letter-spacing: 0.06em; margin-top: 4px; font-family: 'DM Mono', monospace; }
   .field-label { font-size: 10px; color: #bbb; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
   .field-input { width: 100%; padding: 14px 16px; background: #fff; border: 1.5px solid #E0DBD0; border-radius: 10px; font-size: 13px; font-family: 'DM Mono', monospace; color: #1A1A1A; }
@@ -66,6 +69,7 @@
   .badge-cleaning { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; font-weight: 500; color: #7B4F00; background: #FFF3CD; flex-shrink: 0; margin-left: 12px; }
   .centre-row.cleaning { opacity: 0.7; }
   .cleaning-banner { background: #FFF3CD; border: 1.5px solid #FFE08A; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; font-size: 12px; color: #7B4F00; letter-spacing: 0.02em; }
+  .ghost-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #ccc; margin: 12px 0 8px; }
 </style>
 </head>
 <body>
@@ -140,11 +144,8 @@
 </div>
 
 <script>
-  // =============================================
-  // REPLACE THESE WITH YOUR SUPABASE CREDENTIALS
   const SUPABASE_URL = 'https://vvhqwqoaxtdzodceeaii.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2aHF3cW9heHRkem9kY2VlYWlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNDI4ODgsImV4cCI6MjA4OTgxODg4OH0.ALIgaUHqITnyy1RA3jjumW6bQ1Y5e5fj1ESs0XAD1x0';
-  // =============================================
 
   const { createClient } = supabase;
   const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -152,45 +153,31 @@
   let allCentres = [];
   let selectedCentre = null;
   let selectedStatus = null;
-
-  // NEA closure data
   let neaClosures = [];
 
-  // Fetch NEA hawker centre closure dates
   async function fetchNEAClosures() {
     try {
       const res = await fetch('https://data.gov.sg/api/action/datastore_search?resource_id=d_bda4baa634dd1cc7a6c7cad5f19e2d68&limit=500&api_key=v2:6de4693fe51b2f4f797bdc1d3f00f3a4efa130b4c6ff0fe7077b5c66fb92a201:M08tyEt0HQLAFdQ9pLPywObioQNpYXO-');
       const json = await res.json();
-      if (json.result && json.result.records) {
-        neaClosures = json.result.records;
-      }
-    } catch (e) {
-      console.log('NEA closure data unavailable', e);
-    }
+      if (json.result && json.result.records) neaClosures = json.result.records;
+    } catch (e) { console.log('NEA closure data unavailable', e); }
   }
 
-  // Parse NEA date format DD/MM/YYYY to YYYY-MM-DD
   function parseNEADate(str) {
-    if (!str || str === 'NA' || str === 'nil') return null;
+    if (!str || str === 'NA' || str === 'nil' || str === 'TBC') return null;
     const parts = str.split('/');
     if (parts.length !== 3) return null;
     return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
   }
 
-  // Check if a hawker centre is closed for cleaning today
   function getCleaningStatus(centre) {
     const todayStr = today();
-    // Use exact NEA name for matching if available, fall back to display name
     const matchName = (centre.nea_name || centre.name).toLowerCase();
-
     const record = neaClosures.find(r => {
       const neaName = (r.name || '').toLowerCase();
       return neaName === matchName || neaName.includes(matchName.substring(0, 15)) || matchName.includes(neaName.substring(0, 15));
     });
-
     if (!record) return null;
-
-    // Check all 4 quarterly cleaning windows + other works
     const windows = [
       { start: record.q1_cleaningstartdate, end: record.q1_cleaningenddate },
       { start: record.q2_cleaningstartdate, end: record.q2_cleaningenddate },
@@ -198,62 +185,44 @@
       { start: record.q4_cleaningstartdate, end: record.q4_cleaningenddate },
       { start: record.other_works_startdate, end: record.other_works_enddate },
     ];
-
     const isClosed = windows.some(w => {
       const start = parseNEADate(w.start);
       const end = parseNEADate(w.end);
       if (!start || !end) return false;
       return todayStr >= start && todayStr <= end;
     });
-
     return isClosed ? record : null;
   }
 
-  // Get today's date as YYYY-MM-DD
-  function today() {
-    return new Date().toISOString().split('T')[0];
-  }
+  function today() { return new Date().toISOString().split('T')[0]; }
 
-  // Format time from timestamp
   function formatTime(ts) {
     return new Date(ts).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
-  // Show/hide views
+  function daysAgo(ts) {
+    const diff = Math.floor((Date.now() - new Date(ts)) / (1000 * 60 * 60 * 24));
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'yesterday';
+    return `${diff} days ago`;
+  }
+
+  function cleanAddress(addr) {
+    return (addr || '').replace(/,?\s*Singapore\s*\d*/g, '').trim();
+  }
+
   function showView(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + id).classList.add('active');
     window.scrollTo(0, 0);
   }
 
-  // Load hawker centres sorted by most reports today
   async function loadCentres() {
-    const { data: centres, error } = await db
-      .from('hawker_centres')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (error) {
-      document.getElementById('centres-list').innerHTML = '<div class="empty">Could not load hawker centres</div>';
-      return;
-    }
-
-    // Get today's report counts per centre
-    const { data: reports } = await db
-      .from('stall_reports')
-      .select('hawker_centre_id')
-      .gte('reported_at', today() + 'T00:00:00')
-      .lte('reported_at', today() + 'T23:59:59');
-
-    // Count reports per centre
+    const { data: centres, error } = await db.from('hawker_centres').select('*').order('name', { ascending: true });
+    if (error) { document.getElementById('centres-list').innerHTML = '<div class="empty">Could not load hawker centres</div>'; return; }
+    const { data: reports } = await db.from('stall_reports').select('hawker_centre_id').gte('reported_at', today() + 'T00:00:00').lte('reported_at', today() + 'T23:59:59');
     const reportCounts = {};
-    if (reports) {
-      reports.forEach(r => {
-        reportCounts[r.hawker_centre_id] = (reportCounts[r.hawker_centre_id] || 0) + 1;
-      });
-    }
-
-    // Enrich with NEA lat/lng if available
+    if (reports) reports.forEach(r => { reportCounts[r.hawker_centre_id] = (reportCounts[r.hawker_centre_id] || 0) + 1; });
     allCentres = centres.map(c => {
       const neaRecord = neaClosures.find(r => {
         const neaName = (r.name || '').toLowerCase();
@@ -267,46 +236,36 @@
         longitude: c.longitude || (neaRecord ? parseFloat(neaRecord.longitude_hc) : null),
       };
     }).sort((a, b) => b.reportCount - a.reportCount);
-
     renderCentres(allCentres);
   }
 
-  // Render centre list
   function renderCentres(list) {
     const container = document.getElementById('centres-list');
-    if (list.length === 0) {
-      container.innerHTML = '<div class="empty">No hawker centres found</div>';
-      return;
-    }
+    if (list.length === 0) { container.innerHTML = '<div class="empty">No hawker centres found</div>'; return; }
     container.innerHTML = list.map(c => {
       const cleaning = getCleaningStatus(c);
+      const distStr = c.dist !== undefined && c.dist !== 999 ? `<span style="color:#C84B2F">${(c.dist * 111).toFixed(1)}km</span> · ` : '';
       return `
         <button class="centre-row${cleaning ? ' cleaning' : ''}" onclick="selectCentre(${c.id})">
           <div style="flex:1">
             <div class="centre-name">${c.name}</div>
-            <div class="centre-meta">${c.area || ''}${c.area ? ' · ' : ''}${c.address || ''}</div>
+            <div class="centre-meta">${distStr}${cleanAddress(c.address)}</div>
           </div>
           <div style="flex-shrink:0;margin-left:12px;text-align:right">
             ${cleaning
-              ? `<span class="badge-cleaning">🧹 Cleaning</span>`
+              ? `<div style="text-align:right"><span class="badge-cleaning">🧹 Cleaning</span><div style="font-size:10px;color:#7B4F00;margin-top:3px;">centre closed</div></div>`
               : `<div class="reports">${c.reportCount > 0 ? c.reportCount + ' reports' : 'No reports'}</div><div class="reports-sub">today</div>`
             }
           </div>
-        </button>
-      `;
+        </button>`;
     }).join('');
   }
 
-  // Filter centres by search query
   function filterCentres(q) {
     const clearBtn = document.getElementById('clear-btn');
     const label = document.getElementById('results-label');
     clearBtn.style.display = q ? 'block' : 'none';
-    if (!q) {
-      label.textContent = 'Most Active Today';
-      renderCentres(allCentres);
-      return;
-    }
+    if (!q) { label.textContent = 'Most Active Today'; renderCentres(allCentres); return; }
     const filtered = allCentres.filter(h =>
       h.name.toLowerCase().includes(q.toLowerCase()) ||
       (h.area && h.area.toLowerCase().includes(q.toLowerCase())) ||
@@ -316,17 +275,10 @@
     renderCentres(filtered);
   }
 
-  function clearSearch() {
-    document.getElementById('search-input').value = '';
-    filterCentres('');
-  }
+  function clearSearch() { document.getElementById('search-input').value = ''; filterCentres(''); }
 
-  // Use geolocation to find nearby centres
   function useMyLocation() {
-    if (!navigator.geolocation) {
-      alert('Location not supported on this device');
-      return;
-    }
+    if (!navigator.geolocation) { alert('Location not supported on this device'); return; }
     const label = document.getElementById('results-label');
     label.textContent = 'Finding your location...';
     navigator.geolocation.getCurrentPosition(pos => {
@@ -334,10 +286,7 @@
       label.textContent = 'Nearest to You';
       const withDistance = allCentres.map(c => {
         if (c.latitude && c.longitude) {
-          const dist = Math.sqrt(
-            Math.pow(c.latitude - latitude, 2) +
-            Math.pow(c.longitude - longitude, 2)
-          );
+          const dist = Math.sqrt(Math.pow(c.latitude - latitude, 2) + Math.pow(c.longitude - longitude, 2));
           return { ...c, dist };
         }
         return { ...c, dist: 999 };
@@ -349,62 +298,111 @@
     });
   }
 
-  // Select a hawker centre and load its stalls
+  async function confirmReport(reportId, currentCount, btnEl) {
+    btnEl.disabled = true;
+    const newCount = currentCount + 1;
+    const { error } = await db.from('stall_reports').update({ confirmations: newCount }).eq('id', reportId);
+    if (!error) {
+      btnEl.textContent = newCount >= 5 ? `✓ ${newCount}+` : `✓ ${newCount}`;
+      btnEl.style.color = '#2D6A4F';
+      btnEl.style.borderColor = '#2D6A4F';
+    } else {
+      btnEl.disabled = false;
+    }
+  }
+
   async function selectCentre(id) {
     selectedCentre = allCentres.find(c => c.id === id);
     document.getElementById('centre-title').textContent = selectedCentre.name;
-    document.getElementById('centre-meta').textContent = selectedCentre.area || selectedCentre.address || '';
+    document.getElementById('centre-meta').textContent = cleanAddress(selectedCentre.address);
     document.getElementById('report-centre-name').textContent = selectedCentre.name;
     document.getElementById('stalls-list').innerHTML = '<div class="loading">Loading stalls...</div>';
     showView('centre');
 
     const cleaning = getCleaningStatus(selectedCentre);
     const list = document.getElementById('stalls-list');
-
-    // Show cleaning banner if applicable
     const cleaningBanner = cleaning
       ? `<div class="cleaning-banner">🧹 This hawker centre is currently closed for cleaning. Stalls are not operating.</div>`
       : '';
 
-    // Load today's reports for this centre
-    const { data: reports } = await db
-      .from('stall_reports')
-      .select('*')
+    // Today's reports
+    const { data: todayReports } = await db
+      .from('stall_reports').select('*')
       .eq('hawker_centre_id', id)
       .gte('reported_at', today() + 'T00:00:00')
       .lte('reported_at', today() + 'T23:59:59')
       .order('reported_at', { ascending: false });
 
-    if (!reports || reports.length === 0) {
-      list.innerHTML = cleaningBanner + `
-        <div class="empty">No stalls reported yet today</div>
-        <button class="report-btn" onclick="showView('report')">+ Report a stall status</button>
-      `;
-      return;
-    }
+    // All historical reports before today for ghost entries
+    const { data: allReports } = await db
+      .from('stall_reports').select('*')
+      .eq('hawker_centre_id', id)
+      .lt('reported_at', today() + 'T00:00:00')
+      .order('reported_at', { ascending: false });
 
-    // Deduplicate — show latest report per stall number
-    const seen = {};
-    const unique = reports.filter(r => {
-      if (seen[r.stall_number]) return false;
-      seen[r.stall_number] = true;
+    // Deduplicate today by stall number
+    const seenToday = {};
+    const uniqueToday = (todayReports || []).filter(r => {
+      if (seenToday[r.stall_number]) return false;
+      seenToday[r.stall_number] = true;
       return true;
     });
 
-    list.innerHTML = cleaningBanner + unique.map(s => `
-      <div class="stall-row">
-        <div style="flex:1">
-          <div class="stall-name">${s.stall_name || 'Stall ' + s.stall_number}</div>
-          <div class="stall-meta">Stall ${s.stall_number} · reported ${formatTime(s.reported_at)}</div>
-        </div>
-        <span class="badge ${s.status}">${s.status === 'open' ? 'Open' : 'Closed'}</span>
-      </div>
-    `).join('');
+    // Ghost entries — latest per stall, exclude today's stalls
+    const seenGhost = {};
+    const ghostStalls = (allReports || []).filter(r => {
+      if (seenToday[r.stall_number]) return false;
+      if (seenGhost[r.stall_number]) return false;
+      seenGhost[r.stall_number] = true;
+      return true;
+    }).sort((a, b) => a.stall_number.localeCompare(b.stall_number));
 
-    list.innerHTML += `<button class="report-btn" onclick="showView('report')">+ Report a stall status</button>`;
+    let html = cleaningBanner;
+
+    if (uniqueToday.length === 0 && ghostStalls.length === 0) {
+      html += `
+        <div style="padding: 28px 16px; background: #fff; border-radius: 10px; text-align: center;">
+          <div style="font-size: 14px; color: #1A1A1A; font-weight: 500; margin-bottom: 6px;">No updates yet today</div>
+          <div style="font-size: 12px; color: #999; margin-bottom: 20px;">Be the first to help fellow hawker hunters 🍜</div>
+          <button onclick="showView('report')" style="width:100%; padding: 14px; background: #1A1A1A; color: #F7F4EF; border-radius: 10px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; border: none; cursor: pointer;">+ Report a Stall</button>
+        </div>`;
+    } else {
+      if (uniqueToday.length > 0) {
+        html += uniqueToday.map(s => {
+          const count = s.confirmations || 0;
+          const countLabel = count === 0 ? 'Confirm' : (count >= 5 ? `✓ ${count}+` : `✓ ${count}`);
+          return `
+            <div class="stall-row">
+              <div style="flex:1">
+                <div class="stall-name">${s.stall_name || 'Stall ' + s.stall_number}</div>
+                <div class="stall-meta">Stall ${s.stall_number} · reported ${formatTime(s.reported_at)}</div>
+              </div>
+              <div style="display:flex;align-items:center;flex-shrink:0;margin-left:8px">
+                <span class="badge ${s.status}">${s.status === 'open' ? 'Open' : 'Closed'}</span>
+                <button class="confirm-btn" onclick="confirmReport(${s.id}, ${count}, this)">${countLabel}</button>
+              </div>
+            </div>`;
+        }).join('');
+      }
+
+      if (ghostStalls.length > 0) {
+        html += `<div class="ghost-label">Previously reported</div>`;
+        html += ghostStalls.map(s => `
+          <div class="stall-row ghost">
+            <div style="flex:1">
+              <div class="stall-name">${s.stall_name || 'Stall ' + s.stall_number}</div>
+              <div class="stall-meta">Stall ${s.stall_number} · last seen ${daysAgo(s.reported_at)}</div>
+            </div>
+            <span class="badge unknown">?</span>
+          </div>`).join('');
+      }
+
+      html += `<button class="report-btn" onclick="showView('report')">+ Report a stall status</button>`;
+    }
+
+    list.innerHTML = html;
   }
 
-  // Status selection
   function selectStatus(s) {
     selectedStatus = s;
     document.getElementById('btn-open').className = 'status-btn' + (s === 'open' ? ' selected-open' : '');
@@ -414,16 +412,13 @@
 
   function checkForm() {
     const num = document.getElementById('stall-number').value;
-    const btn = document.getElementById('submit-btn');
-    btn.className = 'submit-btn' + (num && selectedStatus ? ' ready' : '');
+    document.getElementById('submit-btn').className = 'submit-btn' + (num && selectedStatus ? ' ready' : '');
   }
 
-  // Submit a report to Supabase
   async function submitReport() {
     const num = document.getElementById('stall-number').value;
     const name = document.getElementById('stall-name').value;
     if (!num || !selectedStatus || !selectedCentre) return;
-
     const { error } = await db.from('stall_reports').insert({
       hawker_centre_id: selectedCentre.id,
       stall_number: num,
@@ -431,20 +426,13 @@
       status: selectedStatus,
       reported_at: new Date().toISOString()
     });
-
-    if (error) {
-      alert('Something went wrong. Please try again.');
-      return;
-    }
-
+    if (error) { alert('Something went wrong. Please try again.'); return; }
     document.getElementById('report-content').innerHTML = `
       <div class="success">
         <span class="checkmark">✓</span>
         <div class="success-title">Reported lah!</div>
         <div class="success-sub">Thanks for helping the community</div>
-      </div>
-    `;
-
+      </div>`;
     setTimeout(() => {
       document.getElementById('stall-number').value = '';
       document.getElementById('stall-name').value = '';
@@ -469,13 +457,11 @@
             </div>
           </div>
           <button class="submit-btn" id="submit-btn" onclick="submitReport()">Submit Report</button>
-        </div>
-      `;
+        </div>`;
       selectCentre(selectedCentre.id);
     }, 2000);
   }
 
-  // Init — fetch NEA closures first, then load centres
   fetchNEAClosures().then(() => loadCentres());
 </script>
 </body>

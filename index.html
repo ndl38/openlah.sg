@@ -159,7 +159,7 @@
   // Fetch NEA hawker centre closure dates
   async function fetchNEAClosures() {
     try {
-      const res = await fetch('https://data.gov.sg/api/action/datastore_search?resource_id=d_bda4baa634dd1cc7a6c7cad5f19e2d68&limit=500');
+      const res = await fetch('https://data.gov.sg/api/action/datastore_search?resource_id=d_bda4baa634dd1cc7a6c7cad5f19e2d68&limit=500&api_key=v2:6de4693fe51b2f4f797bdc1d3f00f3a4efa130b4c6ff0fe7077b5c66fb92a201:M08tyEt0HQLAFdQ9pLPywObioQNpYXO-');
       const json = await res.json();
       if (json.result && json.result.records) {
         neaClosures = json.result.records;
@@ -169,18 +169,45 @@
     }
   }
 
+  // Parse NEA date format DD/MM/YYYY to YYYY-MM-DD
+  function parseNEADate(str) {
+    if (!str || str === 'NA' || str === 'nil') return null;
+    const parts = str.split('/');
+    if (parts.length !== 3) return null;
+    return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+  }
+
   // Check if a hawker centre is closed for cleaning today
   function getCleaningStatus(centreName) {
     const todayStr = today();
-    const match = neaClosures.find(r => {
-      const name = (r.name || r.hawker_centre_name || '').toLowerCase();
-      if (!name.includes(centreName.toLowerCase().substring(0, 8))) return false;
-      const start = r.start_date || r.closure_start_date || '';
-      const end = r.end_date || r.closure_end_date || '';
-      if (!start || !end) return false;
-      return todayStr >= start.substring(0, 10) && todayStr <= end.substring(0, 10);
+    const nameLower = centreName.toLowerCase();
+
+    const record = neaClosures.find(r => {
+      const neaName = (r.name || '').toLowerCase();
+      // Match if either name contains the other (handles slight naming differences)
+      return neaName.includes(nameLower.substring(0, 10)) ||
+             nameLower.includes(neaName.substring(0, 10));
     });
-    return match || null;
+
+    if (!record) return null;
+
+    // Check all 4 quarterly cleaning windows + other works
+    const windows = [
+      { start: record.q1_cleaningstartdate, end: record.q1_cleaningenddate },
+      { start: record.q2_cleaningstartdate, end: record.q2_cleaningenddate },
+      { start: record.q3_cleaningstartdate, end: record.q3_cleaningenddate },
+      { start: record.q4_cleaningstartdate, end: record.q4_cleaningenddate },
+      { start: record.other_works_startdate, end: record.other_works_enddate },
+    ];
+
+    const isClosed = windows.some(w => {
+      const start = parseNEADate(w.start);
+      const end = parseNEADate(w.end);
+      if (!start || !end) return false;
+      return todayStr >= start && todayStr <= end;
+    });
+
+    return isClosed ? record : null;
   }
 
   // Get today's date as YYYY-MM-DD
@@ -227,11 +254,20 @@
       });
     }
 
-    // Add report counts to centres and sort by most active
-    allCentres = centres.map(c => ({
-      ...c,
-      reportCount: reportCounts[c.id] || 0
-    })).sort((a, b) => b.reportCount - a.reportCount);
+    // Enrich with NEA lat/lng if available
+    allCentres = centres.map(c => {
+      const neaRecord = neaClosures.find(r => {
+        const neaName = (r.name || '').toLowerCase();
+        const ourName = c.name.toLowerCase();
+        return neaName.includes(ourName.substring(0, 10)) || ourName.includes(neaName.substring(0, 10));
+      });
+      return {
+        ...c,
+        reportCount: reportCounts[c.id] || 0,
+        latitude: c.latitude || (neaRecord ? parseFloat(neaRecord.latitude_hc) : null),
+        longitude: c.longitude || (neaRecord ? parseFloat(neaRecord.longitude_hc) : null),
+      };
+    }).sort((a, b) => b.reportCount - a.reportCount);
 
     renderCentres(allCentres);
   }

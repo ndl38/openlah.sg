@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenLah</title>
+<title>OpenLah - Check Before You Go</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #F7F4EF; font-family: 'DM Mono', monospace; }
@@ -60,6 +61,7 @@
   .report-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #1A1A1A; margin-bottom: 6px; }
   .report-sub { font-size: 12px; color: #bbb; margin-bottom: 32px; }
   .empty { padding: 24px 16px; background: #fff; border-radius: 10px; text-align: center; font-size: 13px; color: #ccc; }
+  .loading { padding: 24px 16px; text-align: center; font-size: 12px; color: #ccc; letter-spacing: 0.06em; }
   .clear-btn { color: #ccc; font-size: 20px; background: none; border: none; cursor: pointer; }
 </style>
 </head>
@@ -74,7 +76,7 @@
       <div class="tagline">Check before you go. Report when you're there.</div>
     </div>
     <div class="pad">
-      <button class="btn-primary">📍 Use My Location</button>
+      <button class="btn-primary" onclick="useMyLocation()">📍 Use My Location</button>
     </div>
     <div class="pad-sm">
       <div class="search-box">
@@ -83,8 +85,8 @@
       </div>
     </div>
     <div class="pad">
-      <div class="section-label" id="results-label">Nearby</div>
-      <div class="list" id="centres-list"></div>
+      <div class="section-label" id="results-label">Most Active Today</div>
+      <div class="list" id="centres-list"><div class="loading">Loading hawker centres...</div></div>
     </div>
     <div class="footer"><div class="footer-text">Updated daily · Resets midnight</div></div>
   </div>
@@ -135,152 +137,263 @@
 </div>
 
 <script>
-const hawkerCentres = [
-  { id: 1, name: "Maxwell Food Centre", area: "Chinatown", distance: "0.3km", reported: 12 },
-  { id: 2, name: "Lau Pa Sat", area: "CBD", distance: "0.5km", reported: 8 },
-  { id: 3, name: "Old Airport Road Food Centre", area: "Kallang", distance: "1.2km", reported: 23 },
-  { id: 4, name: "Chinatown Complex Food Centre", area: "Chinatown", distance: "0.4km", reported: 15 },
-  { id: 5, name: "Bedok Interchange Hawker Centre", area: "Bedok", distance: "8.1km", reported: 6 },
-  { id: 6, name: "Tiong Bahru Market", area: "Tiong Bahru", distance: "1.8km", reported: 19 },
-  { id: 7, name: "Adam Road Food Centre", area: "Bukit Timah", distance: "4.2km", reported: 4 },
-  { id: 8, name: "Amoy Street Food Centre", area: "CBD", distance: "0.6km", reported: 11 },
-];
+  // =============================================
+  // REPLACE THESE WITH YOUR SUPABASE CREDENTIALS
+  const SUPABASE_URL = 'https://vvhqwqoaxtdzodceeaii.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2aHF3cW9heHRkem9kY2VlYWlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNDI4ODgsImV4cCI6MjA4OTgxODg4OH0.ALIgaUHqITnyy1RA3jjumW6bQ1Y5e5fj1ESs0XAD1x0';
+  // =============================================
 
-const stalls = {
-  1: [
-    { number: "01-10", name: "Tian Tian Hainanese Chicken Rice", status: "open", time: "8:42am" },
-    { number: "01-11", name: "Maxwell Fuzhou Oyster Cake", status: "closed", time: "9:15am" },
-    { number: "01-28", name: "China Street Fritters", status: "open", time: "7:55am" },
-    { number: "01-52", name: "Rojak & Cockles", status: null, time: null },
-  ],
-  2: [
-    { number: "01-05", name: "Satay Club", status: "open", time: "11:30am" },
-    { number: "01-12", name: "Char Kway Teow", status: "closed", time: "10:00am" },
-  ],
-};
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let selectedCentre = null;
-let selectedStatus = null;
+  let allCentres = [];
+  let selectedCentre = null;
+  let selectedStatus = null;
 
-function showView(id) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-' + id).classList.add('active');
-  window.scrollTo(0, 0);
-}
+  // Get today's date as YYYY-MM-DD
+  function today() {
+    return new Date().toISOString().split('T')[0];
+  }
 
-function renderCentres(list) {
-  const container = document.getElementById('centres-list');
-  container.innerHTML = list.map(c => `
-    <button class="centre-row" onclick="selectCentre(${c.id})">
-      <div>
-        <div class="centre-name">${c.name}</div>
-        <div class="centre-meta">${c.area} · ${c.distance}</div>
-      </div>
-      <div>
-        <div class="reports">${c.reported} reports</div>
-        <div class="reports-sub">today</div>
-      </div>
-    </button>
-  `).join('');
-}
+  // Format time from timestamp
+  function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
 
-function filterCentres(q) {
-  const clearBtn = document.getElementById('clear-btn');
-  const label = document.getElementById('results-label');
-  clearBtn.style.display = q ? 'block' : 'none';
-  const filtered = q
-    ? hawkerCentres.filter(h => h.name.toLowerCase().includes(q.toLowerCase()) || h.area.toLowerCase().includes(q.toLowerCase()))
-    : hawkerCentres;
-  label.textContent = q ? `${filtered.length} results` : 'Nearby';
-  renderCentres(filtered);
-}
+  // Show/hide views
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
 
-function clearSearch() {
-  document.getElementById('search-input').value = '';
-  filterCentres('');
-}
+  // Load hawker centres sorted by most reports today
+  async function loadCentres() {
+    const { data: centres, error } = await db
+      .from('hawker_centres')
+      .select('*')
+      .order('name', { ascending: true });
 
-function selectCentre(id) {
-  selectedCentre = hawkerCentres.find(c => c.id === id);
-  document.getElementById('centre-title').textContent = selectedCentre.name;
-  document.getElementById('centre-meta').textContent = `${selectedCentre.area} · ${selectedCentre.reported} reports today`;
-  document.getElementById('report-centre-name').textContent = selectedCentre.name;
-  const centreStalls = stalls[id] || [];
-  const list = document.getElementById('stalls-list');
-  if (centreStalls.length === 0) {
-    list.innerHTML = '<div class="empty">No stalls reported yet today</div>';
-  } else {
-    list.innerHTML = centreStalls.map(s => `
-      <div class="stall-row">
-        <div style="flex:1">
-          <div class="stall-name">${s.name}</div>
-          <div class="stall-meta">Stall ${s.number}${s.time ? ' · reported ' + s.time : ''}</div>
+    if (error) {
+      document.getElementById('centres-list').innerHTML = '<div class="empty">Could not load hawker centres</div>';
+      return;
+    }
+
+    // Get today's report counts per centre
+    const { data: reports } = await db
+      .from('stall_reports')
+      .select('hawker_centre_id')
+      .gte('reported_at', today() + 'T00:00:00')
+      .lte('reported_at', today() + 'T23:59:59');
+
+    // Count reports per centre
+    const reportCounts = {};
+    if (reports) {
+      reports.forEach(r => {
+        reportCounts[r.hawker_centre_id] = (reportCounts[r.hawker_centre_id] || 0) + 1;
+      });
+    }
+
+    // Add report counts to centres and sort by most active
+    allCentres = centres.map(c => ({
+      ...c,
+      reportCount: reportCounts[c.id] || 0
+    })).sort((a, b) => b.reportCount - a.reportCount);
+
+    renderCentres(allCentres);
+  }
+
+  // Render centre list
+  function renderCentres(list) {
+    const container = document.getElementById('centres-list');
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty">No hawker centres found</div>';
+      return;
+    }
+    container.innerHTML = list.map(c => `
+      <button class="centre-row" onclick="selectCentre(${c.id})">
+        <div>
+          <div class="centre-name">${c.name}</div>
+          <div class="centre-meta">${c.area || ''}${c.area ? ' · ' : ''}${c.address || ''}</div>
         </div>
-        <span class="badge ${s.status || 'unknown'}">${s.status === 'open' ? 'Open' : s.status === 'closed' ? 'Closed' : '?'}</span>
-      </div>
+        <div>
+          <div class="reports">${c.reportCount > 0 ? c.reportCount + ' reports' : 'No reports'}</div>
+          <div class="reports-sub">today</div>
+        </div>
+      </button>
     `).join('');
   }
-  list.innerHTML += `<button class="report-btn" onclick="showView('report')">+ Report a stall status</button>`;
-  showView('centre');
-}
 
-function selectStatus(s) {
-  selectedStatus = s;
-  document.getElementById('btn-open').className = 'status-btn' + (s === 'open' ? ' selected-open' : '');
-  document.getElementById('btn-closed').className = 'status-btn' + (s === 'closed' ? ' selected-closed' : '');
-  checkForm();
-}
+  // Filter centres by search query
+  function filterCentres(q) {
+    const clearBtn = document.getElementById('clear-btn');
+    const label = document.getElementById('results-label');
+    clearBtn.style.display = q ? 'block' : 'none';
+    if (!q) {
+      label.textContent = 'Most Active Today';
+      renderCentres(allCentres);
+      return;
+    }
+    const filtered = allCentres.filter(h =>
+      h.name.toLowerCase().includes(q.toLowerCase()) ||
+      (h.area && h.area.toLowerCase().includes(q.toLowerCase())) ||
+      (h.address && h.address.toLowerCase().includes(q.toLowerCase()))
+    );
+    label.textContent = `${filtered.length} results`;
+    renderCentres(filtered);
+  }
 
-function checkForm() {
-  const num = document.getElementById('stall-number').value;
-  const btn = document.getElementById('submit-btn');
-  btn.className = 'submit-btn' + (num && selectedStatus ? ' ready' : '');
-}
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    filterCentres('');
+  }
 
-function submitReport() {
-  const num = document.getElementById('stall-number').value;
-  if (!num || !selectedStatus) return;
-  document.getElementById('report-content').innerHTML = `
-    <div class="success">
-      <span class="checkmark">✓</span>
-      <div class="success-title">Reported lah!</div>
-      <div class="success-sub">Thanks for helping the community</div>
-    </div>
-  `;
-  setTimeout(() => {
-    document.getElementById('stall-number').value = '';
-    document.getElementById('stall-name').value = '';
-    selectedStatus = null;
-    document.getElementById('btn-open').className = 'status-btn';
-    document.getElementById('btn-closed').className = 'status-btn';
+  // Use geolocation to find nearby centres
+  function useMyLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      const label = document.getElementById('results-label');
+      label.textContent = 'Nearest to You';
+
+      // Sort by distance if centres have lat/lng
+      const withDistance = allCentres.map(c => {
+        if (c.latitude && c.longitude) {
+          const dist = Math.sqrt(
+            Math.pow(c.latitude - latitude, 2) +
+            Math.pow(c.longitude - longitude, 2)
+          );
+          return { ...c, dist };
+        }
+        return { ...c, dist: 999 };
+      }).sort((a, b) => a.dist - b.dist);
+
+      renderCentres(withDistance);
+    });
+  }
+
+  // Select a hawker centre and load its stalls
+  async function selectCentre(id) {
+    selectedCentre = allCentres.find(c => c.id === id);
+    document.getElementById('centre-title').textContent = selectedCentre.name;
+    document.getElementById('centre-meta').textContent = selectedCentre.area || selectedCentre.address || '';
+    document.getElementById('report-centre-name').textContent = selectedCentre.name;
+    document.getElementById('stalls-list').innerHTML = '<div class="loading">Loading stalls...</div>';
+    showView('centre');
+
+    // Load today's reports for this centre
+    const { data: reports } = await db
+      .from('stall_reports')
+      .select('*')
+      .eq('hawker_centre_id', id)
+      .gte('reported_at', today() + 'T00:00:00')
+      .lte('reported_at', today() + 'T23:59:59')
+      .order('reported_at', { ascending: false });
+
+    const list = document.getElementById('stalls-list');
+
+    if (!reports || reports.length === 0) {
+      list.innerHTML = `
+        <div class="empty">No stalls reported yet today</div>
+        <button class="report-btn" onclick="showView('report')">+ Report a stall status</button>
+      `;
+      return;
+    }
+
+    // Deduplicate — show latest report per stall number
+    const seen = {};
+    const unique = reports.filter(r => {
+      if (seen[r.stall_number]) return false;
+      seen[r.stall_number] = true;
+      return true;
+    });
+
+    list.innerHTML = unique.map(s => `
+      <div class="stall-row">
+        <div style="flex:1">
+          <div class="stall-name">${s.stall_name || 'Stall ' + s.stall_number}</div>
+          <div class="stall-meta">Stall ${s.stall_number} · reported ${formatTime(s.reported_at)}</div>
+        </div>
+        <span class="badge ${s.status}">${s.status === 'open' ? 'Open' : 'Closed'}</span>
+      </div>
+    `).join('');
+
+    list.innerHTML += `<button class="report-btn" onclick="showView('report')">+ Report a stall status</button>`;
+  }
+
+  // Status selection
+  function selectStatus(s) {
+    selectedStatus = s;
+    document.getElementById('btn-open').className = 'status-btn' + (s === 'open' ? ' selected-open' : '');
+    document.getElementById('btn-closed').className = 'status-btn' + (s === 'closed' ? ' selected-closed' : '');
     checkForm();
+  }
+
+  function checkForm() {
+    const num = document.getElementById('stall-number').value;
+    const btn = document.getElementById('submit-btn');
+    btn.className = 'submit-btn' + (num && selectedStatus ? ' ready' : '');
+  }
+
+  // Submit a report to Supabase
+  async function submitReport() {
+    const num = document.getElementById('stall-number').value;
+    const name = document.getElementById('stall-name').value;
+    if (!num || !selectedStatus || !selectedCentre) return;
+
+    const { error } = await db.from('stall_reports').insert({
+      hawker_centre_id: selectedCentre.id,
+      stall_number: num,
+      stall_name: name || null,
+      status: selectedStatus,
+      reported_at: new Date().toISOString()
+    });
+
+    if (error) {
+      alert('Something went wrong. Please try again.');
+      return;
+    }
+
     document.getElementById('report-content').innerHTML = `
-      <div class="report-title">Report Status</div>
-      <div class="report-sub" id="report-centre-name">${selectedCentre?.name || ''}</div>
-      <div class="form-section">
-        <div>
-          <div class="field-label">Stall Number</div>
-          <input class="field-input" id="stall-number" type="text" placeholder="e.g. 01-10" oninput="checkForm()">
-        </div>
-        <div>
-          <div class="field-label">Stall Name <span style="color:#ddd">(optional)</span></div>
-          <input class="field-input" id="stall-name" type="text" placeholder="e.g. Tian Tian Chicken Rice">
-        </div>
-        <div>
-          <div class="field-label">Status</div>
-          <div class="status-btns">
-            <button class="status-btn" id="btn-open" onclick="selectStatus('open')">✓ Open</button>
-            <button class="status-btn" id="btn-closed" onclick="selectStatus('closed')">✕ Closed</button>
-          </div>
-        </div>
-        <button class="submit-btn" id="submit-btn" onclick="submitReport()">Submit Report</button>
+      <div class="success">
+        <span class="checkmark">✓</span>
+        <div class="success-title">Reported lah!</div>
+        <div class="success-sub">Thanks for helping the community</div>
       </div>
     `;
-    showView('centre');
-  }, 2000);
-}
 
-renderCentres(hawkerCentres);
+    setTimeout(() => {
+      document.getElementById('stall-number').value = '';
+      document.getElementById('stall-name').value = '';
+      selectedStatus = null;
+      document.getElementById('report-content').innerHTML = `
+        <div class="report-title">Report Status</div>
+        <div class="report-sub" id="report-centre-name">${selectedCentre?.name || ''}</div>
+        <div class="form-section">
+          <div>
+            <div class="field-label">Stall Number</div>
+            <input class="field-input" id="stall-number" type="text" placeholder="e.g. 01-10" oninput="checkForm()">
+          </div>
+          <div>
+            <div class="field-label">Stall Name <span style="color:#ddd">(optional)</span></div>
+            <input class="field-input" id="stall-name" type="text" placeholder="e.g. Tian Tian Chicken Rice">
+          </div>
+          <div>
+            <div class="field-label">Status</div>
+            <div class="status-btns">
+              <button class="status-btn" id="btn-open" onclick="selectStatus('open')">✓ Open</button>
+              <button class="status-btn" id="btn-closed" onclick="selectStatus('closed')">✕ Closed</button>
+            </div>
+          </div>
+          <button class="submit-btn" id="submit-btn" onclick="submitReport()">Submit Report</button>
+        </div>
+      `;
+      selectCentre(selectedCentre.id);
+    }, 2000);
+  }
+
+  // Init
+  loadCentres();
 </script>
 </body>
 </html>

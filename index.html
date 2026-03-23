@@ -178,15 +178,14 @@
   }
 
   // Check if a hawker centre is closed for cleaning today
-  function getCleaningStatus(centreName) {
+  function getCleaningStatus(centre) {
     const todayStr = today();
-    const nameLower = centreName.toLowerCase();
+    // Use exact NEA name for matching if available, fall back to display name
+    const matchName = (centre.nea_name || centre.name).toLowerCase();
 
     const record = neaClosures.find(r => {
       const neaName = (r.name || '').toLowerCase();
-      // Match if either name contains the other (handles slight naming differences)
-      return neaName.includes(nameLower.substring(0, 10)) ||
-             nameLower.includes(neaName.substring(0, 10));
+      return neaName === matchName || neaName.includes(matchName.substring(0, 15)) || matchName.includes(neaName.substring(0, 15));
     });
 
     if (!record) return null;
@@ -280,7 +279,7 @@
       return;
     }
     container.innerHTML = list.map(c => {
-      const cleaning = getCleaningStatus(c.name);
+      const cleaning = getCleaningStatus(c);
       return `
         <button class="centre-row${cleaning ? ' cleaning' : ''}" onclick="selectCentre(${c.id})">
           <div style="flex:1">
@@ -359,7 +358,7 @@
     document.getElementById('stalls-list').innerHTML = '<div class="loading">Loading stalls...</div>';
     showView('centre');
 
-    const cleaning = getCleaningStatus(selectedCentre.name);
+    const cleaning = getCleaningStatus(selectedCentre);
     const list = document.getElementById('stalls-list');
 
     // Show cleaning banner if applicable

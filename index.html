@@ -29,8 +29,8 @@
   .list { display: flex; flex-direction: column; gap: 2px; }
   .centre-row { width: 100%; padding: 14px 16px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; text-align: left; }
   .centre-row:active { background: #f0ede6; }
-  .centre-name { font-size: 12px; color: #1A1A1A; font-weight: 500; margin-bottom: 3px; }
-  .centre-meta { font-size: 10px; color: #999; }
+  .centre-name { font-size: 13px; color: #1A1A1A; font-weight: 500; margin-bottom: 3px; }
+  .centre-meta { font-size: 11px; color: #999; }
   .reports { font-size: 11px; color: #C84B2F; font-weight: 500; }
   .reports-sub { font-size: 10px; color: #999; margin-top: 2px; text-align: right; }
   .back-btn { font-size: 11px; color: #999; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px; display: block; }
@@ -284,11 +284,11 @@
         <button class="centre-row${cleaning ? ' cleaning' : ''}" onclick="selectCentre(${c.id})">
           <div style="flex:1">
             <div class="centre-name">${c.name}</div>
-            <div class="centre-meta">${c.dist !== undefined && c.dist !== 999 ? `<span style="color:#C84B2F">${(c.dist * 111).toFixed(1)}km</span> · ` : ''}${(c.address || '').replace(', Singapore', '').replace('Singapore', '')}</div>
+            <div class="centre-meta">${c.area || ''}${c.area ? ' · ' : ''}${c.address || ''}</div>
           </div>
           <div style="flex-shrink:0;margin-left:12px;text-align:right">
             ${cleaning
-              ? `<div style="text-align:right"><span class="badge-cleaning">🧹 Cleaning</span><div style="font-size:10px;color:#7B4F00;margin-top:3px;">centre closed</div></div>`
+              ? `<span class="badge-cleaning">🧹 Cleaning</span>`
               : `<div class="reports">${c.reportCount > 0 ? c.reportCount + ' reports' : 'No reports'}</div><div class="reports-sub">today</div>`
             }
           </div>
@@ -377,11 +377,8 @@
 
     if (!reports || reports.length === 0) {
       list.innerHTML = cleaningBanner + `
-        <div style="padding: 28px 16px; background: #fff; border-radius: 10px; text-align: center;">
-          <div style="font-size: 14px; color: #1A1A1A; font-weight: 500; margin-bottom: 6px;">No updates yet today</div>
-          <div style="font-size: 12px; color: #999; margin-bottom: 20px;">Be the first to help fellow hawker hunters 🍜</div>
-          <button onclick="showView('report')" style="width:100%; padding: 14px; background: #1A1A1A; color: #F7F4EF; border-radius: 10px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; border: none; cursor: pointer;">+ Report a Stall</button>
-        </div>
+        <div class="empty">No stalls reported yet today</div>
+        <button class="report-btn" onclick="showView('report')">+ Report a stall status</button>
       `;
       return;
     }

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenLah</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #F7F4EF; font-family: 'DM Mono', monospace; }
+  .app { max-width: 430px; margin: 0 auto; min-height: 100vh; position: relative; }
+  button { cursor: pointer; border: none; background: none; font-family: inherit; }
+  input:focus { outline: none; }
+  ::placeholder { color: #aaa; }
+  .view { display: none; padding-bottom: 80px; }
+  .view.active { display: block; }
+  .header { padding: 48px 24px 28px; border-bottom: 1.5px solid #E0DBD0; }
+  .label { font-size: 10px; letter-spacing: 0.2em; color: #bbb; text-transform: uppercase; margin-bottom: 10px; }
+  .logo { font-family: 'Syne', sans-serif; font-size: 44px; font-weight: 800; color: #1A1A1A; line-height: 1; }
+  .logo span { color: #C84B2F; }
+  .tagline { font-size: 13px; color: #999; margin-top: 10px; }
+  .pad { padding: 20px 24px 0; }
+  .pad-sm { padding: 12px 24px 0; }
+  .btn-primary { width: 100%; padding: 15px; background: #1A1A1A; color: #F7F4EF; border-radius: 12px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'DM Mono', monospace; }
+  .search-box { border: 1.5px solid #E0DBD0; border-radius: 12px; background: #fff; display: flex; align-items: center; padding: 0 16px; gap: 10px; }
+  .search-box input { flex: 1; padding: 14px 0; font-size: 13px; color: #1A1A1A; background: transparent; border: none; font-family: 'DM Mono', monospace; }
+  .section-label { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #ccc; margin-bottom: 12px; }
+  .list { display: flex; flex-direction: column; gap: 2px; }
+  .centre-row { width: 100%; padding: 14px 16px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; text-align: left; }
+  .centre-row:active { background: #f0ede6; }
+  .centre-name { font-size: 13px; color: #1A1A1A; font-weight: 500; margin-bottom: 3px; }
+  .centre-meta { font-size: 11px; color: #bbb; }
+  .reports { font-size: 11px; color: #C84B2F; font-weight: 500; }
+  .reports-sub { font-size: 10px; color: #ccc; margin-top: 2px; text-align: right; }
+  .back-btn { font-size: 11px; color: #999; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px; display: block; }
+  .centre-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #1A1A1A; margin-bottom: 4px; }
+  .stall-row { padding: 14px 16px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .stall-name { font-size: 13px; color: #1A1A1A; font-weight: 500; margin-bottom: 3px; }
+  .stall-meta { font-size: 11px; color: #ccc; }
+  .badge { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; font-weight: 500; flex-shrink: 0; margin-left: 12px; }
+  .badge.open { color: #2D6A4F; background: #D8F3DC; }
+  .badge.closed { color: #9B2226; background: #FFE8E8; }
+  .badge.unknown { color: #999; background: #EFEFEF; }
+  .report-btn { width: 100%; padding: 14px 16px; background: transparent; border: 1.5px dashed #E0DBD0; border-radius: 10px; font-size: 12px; color: #bbb; letter-spacing: 0.06em; margin-top: 4px; font-family: 'DM Mono', monospace; }
+  .field-label { font-size: 10px; color: #bbb; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .field-input { width: 100%; padding: 14px 16px; background: #fff; border: 1.5px solid #E0DBD0; border-radius: 10px; font-size: 13px; font-family: 'DM Mono', monospace; color: #1A1A1A; }
+  .status-btns { display: flex; gap: 8px; }
+  .status-btn { flex: 1; padding: 14px; border-radius: 10px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; border: 1.5px solid #E0DBD0; background: #fff; color: #bbb; transition: all 0.15s; font-family: 'DM Mono', monospace; }
+  .status-btn.selected-open { background: #2D6A4F; color: #fff; border-color: transparent; }
+  .status-btn.selected-closed { background: #9B2226; color: #fff; border-color: transparent; }
+  .submit-btn { width: 100%; padding: 16px; margin-top: 4px; background: #E0DBD0; color: #bbb; border-radius: 12px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'DM Mono', monospace; transition: background 0.2s; }
+  .submit-btn.ready { background: #1A1A1A; color: #F7F4EF; }
+  .success { text-align: center; padding-top: 60px; }
+  .checkmark { font-size: 52px; margin-bottom: 16px; display: block; }
+  .success-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #1A1A1A; }
+  .success-sub { font-size: 12px; color: #bbb; margin-top: 8px; }
+  .footer { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 12px 24px 24px; background: linear-gradient(to top, #F7F4EF 60%, transparent); display: flex; justify-content: center; }
+  .footer-text { font-size: 10px; color: #ccc; letter-spacing: 0.12em; text-transform: uppercase; }
+  .form-section { display: flex; flex-direction: column; gap: 14px; }
+  .report-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #1A1A1A; margin-bottom: 6px; }
+  .report-sub { font-size: 12px; color: #bbb; margin-bottom: 32px; }
+  .empty { padding: 24px 16px; background: #fff; border-radius: 10px; text-align: center; font-size: 13px; color: #ccc; }
+  .clear-btn { color: #ccc; font-size: 20px; background: none; border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HOME -->
+  <div class="view active" id="view-home">
+    <div class="header">
+      <div class="label">Singapore Hawker Tracker</div>
+      <div class="logo">Open<span>Lah</span></div>
+      <div class="tagline">Check before you go. Report when you're there.</div>
+    </div>
+    <div class="pad">
+      <button class="btn-primary">📍 Use My Location</button>
+    </div>
+    <div class="pad-sm">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search area or centre name..." oninput="filterCentres(this.value)">
+        <button class="clear-btn" onclick="clearSearch()" id="clear-btn" style="display:none">×</button>
+      </div>
+    </div>
+    <div class="pad">
+      <div class="section-label" id="results-label">Nearby</div>
+      <div class="list" id="centres-list"></div>
+    </div>
+    <div class="footer"><div class="footer-text">Updated daily · Resets midnight</div></div>
+  </div>
+
+  <!-- CENTRE -->
+  <div class="view" id="view-centre">
+    <div class="header">
+      <button class="back-btn" onclick="showView('home')">← Back</button>
+      <div class="centre-title" id="centre-title"></div>
+      <div class="centre-meta" id="centre-meta"></div>
+    </div>
+    <div class="pad">
+      <div class="section-label">Stalls</div>
+      <div class="list" id="stalls-list"></div>
+    </div>
+    <div class="footer"><div class="footer-text">Updated daily · Resets midnight</div></div>
+  </div>
+
+  <!-- REPORT -->
+  <div class="view" id="view-report">
+    <div style="padding: 48px 24px;">
+      <button class="back-btn" onclick="showView('centre')">← Back</button>
+      <div id="report-content">
+        <div class="report-title">Report Status</div>
+        <div class="report-sub" id="report-centre-name"></div>
+        <div class="form-section">
+          <div>
+            <div class="field-label">Stall Number</div>
+            <input class="field-input" id="stall-number" type="text" placeholder="e.g. 01-10" oninput="checkForm()">
+          </div>
+          <div>
+            <div class="field-label">Stall Name <span style="color:#ddd">(optional)</span></div>
+            <input class="field-input" id="stall-name" type="text" placeholder="e.g. Tian Tian Chicken Rice">
+          </div>
+          <div>
+            <div class="field-label">Status</div>
+            <div class="status-btns">
+              <button class="status-btn" id="btn-open" onclick="selectStatus('open')">✓ Open</button>
+              <button class="status-btn" id="btn-closed" onclick="selectStatus('closed')">✕ Closed</button>
+            </div>
+          </div>
+          <button class="submit-btn" id="submit-btn" onclick="submitReport()">Submit Report</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const hawkerCentres = [
+  { id: 1, name: "Maxwell Food Centre", area: "Chinatown", distance: "0.3km", reported: 12 },
+  { id: 2, name: "Lau Pa Sat", area: "CBD", distance: "0.5km", reported: 8 },
+  { id: 3, name: "Old Airport Road Food Centre", area: "Kallang", distance: "1.2km", reported: 23 },
+  { id: 4, name: "Chinatown Complex Food Centre", area: "Chinatown", distance: "0.4km", reported: 15 },
+  { id: 5, name: "Bedok Interchange Hawker Centre", area: "Bedok", distance: "8.1km", reported: 6 },
+  { id: 6, name: "Tiong Bahru Market", area: "Tiong Bahru", distance: "1.8km", reported: 19 },
+  { id: 7, name: "Adam Road Food Centre", area: "Bukit Timah", distance: "4.2km", reported: 4 },
+  { id: 8, name: "Amoy Street Food Centre", area: "CBD", distance: "0.6km", reported: 11 },
+];
+
+const stalls = {
+  1: [
+    { number: "01-10", name: "Tian Tian Hainanese Chicken Rice", status: "open", time: "8:42am" },
+    { number: "01-11", name: "Maxwell Fuzhou Oyster Cake", status: "closed", time: "9:15am" },
+    { number: "01-28", name: "China Street Fritters", status: "open", time: "7:55am" },
+    { number: "01-52", name: "Rojak & Cockles", status: null, time: null },
+  ],
+  2: [
+    { number: "01-05", name: "Satay Club", status: "open", time: "11:30am" },
+    { number: "01-12", name: "Char Kway Teow", status: "closed", time: "10:00am" },
+  ],
+};
+
+let selectedCentre = null;
+let selectedStatus = null;
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function renderCentres(list) {
+  const container = document.getElementById('centres-list');
+  container.innerHTML = list.map(c => `
+    <button class="centre-row" onclick="selectCentre(${c.id})">
+      <div>
+        <div class="centre-name">${c.name}</div>
+        <div class="centre-meta">${c.area} · ${c.distance}</div>
+      </div>
+      <div>
+        <div class="reports">${c.reported} reports</div>
+        <div class="reports-sub">today</div>
+      </div>
+    </button>
+  `).join('');
+}
+
+function filterCentres(q) {
+  const clearBtn = document.getElementById('clear-btn');
+  const label = document.getElementById('results-label');
+  clearBtn.style.display = q ? 'block' : 'none';
+  const filtered = q
+    ? hawkerCentres.filter(h => h.name.toLowerCase().includes(q.toLowerCase()) || h.area.toLowerCase().includes(q.toLowerCase()))
+    : hawkerCentres;
+  label.textContent = q ? `${filtered.length} results` : 'Nearby';
+  renderCentres(filtered);
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  filterCentres('');
+}
+
+function selectCentre(id) {
+  selectedCentre = hawkerCentres.find(c => c.id === id);
+  document.getElementById('centre-title').textContent = selectedCentre.name;
+  document.getElementById('centre-meta').textContent = `${selectedCentre.area} · ${selectedCentre.reported} reports today`;
+  document.getElementById('report-centre-name').textContent = selectedCentre.name;
+  const centreStalls = stalls[id] || [];
+  const list = document.getElementById('stalls-list');
+  if (centreStalls.length === 0) {
+    list.innerHTML = '<div class="empty">No stalls reported yet today</div>';
+  } else {
+    list.innerHTML = centreStalls.map(s => `
+      <div class="stall-row">
+        <div style="flex:1">
+          <div class="stall-name">${s.name}</div>
+          <div class="stall-meta">Stall ${s.number}${s.time ? ' · reported ' + s.time : ''}</div>
+        </div>
+        <span class="badge ${s.status || 'unknown'}">${s.status === 'open' ? 'Open' : s.status === 'closed' ? 'Closed' : '?'}</span>
+      </div>
+    `).join('');
+  }
+  list.innerHTML += `<button class="report-btn" onclick="showView('report')">+ Report a stall status</button>`;
+  showView('centre');
+}
+
+function selectStatus(s) {
+  selectedStatus = s;
+  document.getElementById('btn-open').className = 'status-btn' + (s === 'open' ? ' selected-open' : '');
+  document.getElementById('btn-closed').className = 'status-btn' + (s === 'closed' ? ' selected-closed' : '');
+  checkForm();
+}
+
+function checkForm() {
+  const num = document.getElementById('stall-number').value;
+  const btn = document.getElementById('submit-btn');
+  btn.className = 'submit-btn' + (num && selectedStatus ? ' ready' : '');
+}
+
+function submitReport() {
+  const num = document.getElementById('stall-number').value;
+  if (!num || !selectedStatus) return;
+  document.getElementById('report-content').innerHTML = `
+    <div class="success">
+      <span class="checkmark">✓</span>
+      <div class="success-title">Reported lah!</div>
+      <div class="success-sub">Thanks for helping the community</div>
+    </div>
+  `;
+  setTimeout(() => {
+    document.getElementById('stall-number').value = '';
+    document.getElementById('stall-name').value = '';
+    selectedStatus = null;
+    document.getElementById('btn-open').className = 'status-btn';
+    document.getElementById('btn-closed').className = 'status-btn';
+    checkForm();
+    document.getElementById('report-content').innerHTML = `
+      <div class="report-title">Report Status</div>
+      <div class="report-sub" id="report-centre-name">${selectedCentre?.name || ''}</div>
+      <div class="form-section">
+        <div>
+          <div class="field-label">Stall Number</div>
+          <input class="field-input" id="stall-number" type="text" placeholder="e.g. 01-10" oninput="checkForm()">
+        </div>
+        <div>
+          <div class="field-label">Stall Name <span style="color:#ddd">(optional)</span></div>
+          <input class="field-input" id="stall-name" type="text" placeholder="e.g. Tian Tian Chicken Rice">
+        </div>
+        <div>
+          <div class="field-label">Status</div>
+          <div class="status-btns">
+            <button class="status-btn" id="btn-open" onclick="selectStatus('open')">✓ Open</button>
+            <button class="status-btn" id="btn-closed" onclick="selectStatus('closed')">✕ Closed</button>
+          </div>
+        </div>
+        <button class="submit-btn" id="submit-btn" onclick="submitReport()">Submit Report</button>
+      </div>
+    `;
+    showView('centre');
+  }, 2000);
+}
+
+renderCentres(hawkerCentres);
+</script>
+</body>
+</html>

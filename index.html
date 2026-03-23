@@ -284,7 +284,7 @@
         <button class="centre-row${cleaning ? ' cleaning' : ''}" onclick="selectCentre(${c.id})">
           <div style="flex:1">
             <div class="centre-name">${c.name}</div>
-            <div class="centre-meta">${c.dist !== undefined && c.dist !== 999 ? (c.dist * 111).toFixed(1) + 'km · ' : ''}${c.address || ''}</div>
+            <div class="centre-meta">${c.dist !== undefined && c.dist !== 999 ? (c.dist * 111).toFixed(1) + 'km · ' : ''}${(c.address || '').replace(', Singapore', '').replace('Singapore', '')}</div>
           </div>
           <div style="flex-shrink:0;margin-left:12px;text-align:right">
             ${cleaning

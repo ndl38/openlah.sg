@@ -288,7 +288,7 @@
           </div>
           <div style="flex-shrink:0;margin-left:12px;text-align:right">
             ${cleaning
-              ? `<span class="badge-cleaning">🧹 Closed for Cleaning</span>`
+              ? `<div style="text-align:right"><span class="badge-cleaning">🧹 Cleaning</span><div style="font-size:10px;color:#7B4F00;margin-top:3px;">Centre closed</div></div>`
               : `<div class="reports">${c.reportCount > 0 ? c.reportCount + ' reports' : 'No reports'}</div><div class="reports-sub">today</div>`
             }
           </div>

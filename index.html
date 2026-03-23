@@ -377,8 +377,11 @@
 
     if (!reports || reports.length === 0) {
       list.innerHTML = cleaningBanner + `
-        <div class="empty">No stalls reported yet today</div>
-        <button class="report-btn" onclick="showView('report')">+ Report a stall status</button>
+        <div style="padding: 28px 16px; background: #fff; border-radius: 10px; text-align: center;">
+          <div style="font-size: 14px; color: #1A1A1A; font-weight: 500; margin-bottom: 6px;">No updates yet today</div>
+          <div style="font-size: 12px; color: #999; margin-bottom: 20px;">Be the first to help fellow hawker hunters 🍜</div>
+          <button onclick="showView('report')" style="width:100%; padding: 14px; background: #1A1A1A; color: #F7F4EF; border-radius: 10px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; border: none; cursor: pointer;">+ Report a Stall</button>
+        </div>
       `;
       return;
     }

@@ -255,7 +255,7 @@
             ${cleaning
               ? `<div style="text-align:right"><span class="badge-cleaning">🧹 Cleaning</span><div style="font-size:10px;color:#7B4F00;margin-top:3px;">centre closed</div></div>`
               : `${c.reportCount > 0 
-  ? `<span style="font-size:10px;font-weight:500;padding:4px 10px;border-radius:6px;color:#2D6A4F;background:#D8F3DC;letter-spacing:0.04em;">${c.reportCount === 1 ? '1 check lah!' : c.reportCount + ' checks lah!'}</span>`
+  ? `<span style="font-size:10px;font-weight:500;padding:4px 8px;border-radius:6px;color:#2D6A4F;background:#D8F3DC;letter-spacing:0.04em;text-align:center;line-height:1.4;">${c.reportCount}<br>${c.reportCount === 1 ? 'check lah!' : 'checks lah!'}</span>`
   : `<span style="font-size:10px;font-weight:500;padding:4px 10px;border-radius:6px;color:#C84B2F;background:#FFE8E8;letter-spacing:0.04em;">No check-ins</span>`
 }`
             }

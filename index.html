@@ -254,10 +254,7 @@
           <div style="flex-shrink:0;margin-left:12px;text-align:right">
             ${cleaning
               ? `<div style="text-align:right"><span class="badge-cleaning">🧹 Cleaning</span><div style="font-size:10px;color:#7B4F00;margin-top:3px;">centre closed</div></div>`
-              : `${c.reportCount > 0 
-  ? `<span style="font-size:10px;font-weight:500;padding:4px 8px;border-radius:6px;color:#2D6A4F;background:#D8F3DC;letter-spacing:0.04em;">${c.reportCount} ${c.reportCount === 1 ? 'report' : 'reports'}</span>`
-: `<span style="font-size:10px;font-weight:500;padding:4px 8px;border-radius:6px;color:#C84B2F;background:#FFE8E8;letter-spacing:0.04em;">no reports</span>`
-}`
+              : `<div class="reports">${c.reportCount > 0 ? c.reportCount + ' reports' : 'No reports'}</div><div class="reports-sub">today</div>`
             }
           </div>
         </button>`;

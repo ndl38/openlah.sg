@@ -70,6 +70,9 @@
   .centre-row.cleaning { opacity: 0.7; }
   .cleaning-banner { background: #FFF3CD; border: 1.5px solid #FFE08A; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; font-size: 12px; color: #7B4F00; letter-spacing: 0.02em; }
   .ghost-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #ccc; margin: 12px 0 8px; }
+  .quick-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-family: 'DM Mono', monospace; cursor: pointer; transition: all 0.15s; }
+  .quick-btn.open { border: 1.5px solid #2D6A4F; color: #2D6A4F; background: #fff; }
+  .quick-btn.closed { border: 1.5px solid #9B2226; color: #9B2226; background: #fff; }
 </style>
 </head>
 <body>
@@ -254,7 +257,10 @@
           <div style="flex-shrink:0;margin-left:12px;text-align:right">
             ${cleaning
               ? `<div style="text-align:right"><span class="badge-cleaning">🧹 Cleaning</span><div style="font-size:10px;color:#7B4F00;margin-top:3px;">centre closed</div></div>`
-              : `<div class="reports">${c.reportCount > 0 ? c.reportCount + ' reports' : 'No reports'}</div><div class="reports-sub">today</div>`
+              : `${c.reportCount > 0
+                  ? `<span style="font-size:10px;font-weight:500;padding:4px 8px;border-radius:6px;color:#2D6A4F;background:#D8F3DC;letter-spacing:0.04em;">${c.reportCount} ${c.reportCount === 1 ? 'report' : 'reports'}</span>`
+                  : `<span style="font-size:10px;font-weight:500;padding:4px 8px;border-radius:6px;color:#C84B2F;background:#FFE8E8;letter-spacing:0.04em;">no reports</span>`
+                }`
             }
           </div>
         </button>`;
@@ -311,6 +317,38 @@
     }
   }
 
+  async function quickReport(ghostId, stallNumber, stallName, status) {
+    const row = document.getElementById('ghost-' + ghostId);
+    const buttons = row.querySelectorAll('button');
+    buttons.forEach(b => b.disabled = true);
+
+    const { error } = await db.from('stall_reports').insert({
+      hawker_centre_id: selectedCentre.id,
+      stall_number: stallNumber,
+      stall_name: stallName || null,
+      status: status,
+      reported_at: new Date().toISOString()
+    });
+
+    if (error) {
+      buttons.forEach(b => b.disabled = false);
+      alert('Something went wrong. Please try again.');
+      return;
+    }
+
+    // Show feedback on that row
+    row.style.opacity = '1';
+    row.innerHTML = `
+      <div style="flex:1">
+        <div class="stall-name">${stallName || 'Stall ' + stallNumber}</div>
+        <div class="stall-meta">Stall ${stallNumber}</div>
+      </div>
+      <span class="badge ${status}">${status === 'open' ? '✓ Reported open!' : '✕ Reported closed!'}</span>`;
+
+    // Refresh after 2 seconds
+    setTimeout(() => selectCentre(selectedCentre.id), 2000);
+  }
+
   async function selectCentre(id) {
     selectedCentre = allCentres.find(c => c.id === id);
     document.getElementById('centre-title').textContent = selectedCentre.name;
@@ -325,7 +363,6 @@
       ? `<div class="cleaning-banner">🧹 This hawker centre is currently closed for cleaning. Stalls are not operating.</div>`
       : '';
 
-    // Today's reports
     const { data: todayReports } = await db
       .from('stall_reports').select('*')
       .eq('hawker_centre_id', id)
@@ -333,14 +370,12 @@
       .lte('reported_at', today() + 'T23:59:59')
       .order('reported_at', { ascending: false });
 
-    // All historical reports before today for ghost entries
     const { data: allReports } = await db
       .from('stall_reports').select('*')
       .eq('hawker_centre_id', id)
       .lt('reported_at', today() + 'T00:00:00')
       .order('reported_at', { ascending: false });
 
-    // Deduplicate today by stall number
     const seenToday = {};
     const uniqueToday = (todayReports || []).filter(r => {
       if (seenToday[r.stall_number]) return false;
@@ -348,7 +383,6 @@
       return true;
     });
 
-    // Ghost entries — latest per stall, exclude today's stalls
     const seenGhost = {};
     const ghostStalls = (allReports || []).filter(r => {
       if (seenToday[r.stall_number]) return false;
@@ -387,14 +421,20 @@
 
       if (ghostStalls.length > 0) {
         html += `<div class="ghost-label">Previously reported</div>`;
-        html += ghostStalls.map(s => `
-          <div class="stall-row ghost">
+        html += ghostStalls.map(s => {
+          const sn = s.stall_name ? s.stall_name.replace(/'/g, "\\'") : '';
+          return `
+          <div class="stall-row ghost" id="ghost-${s.id}">
             <div style="flex:1">
               <div class="stall-name">${s.stall_name || 'Stall ' + s.stall_number}</div>
               <div class="stall-meta">Stall ${s.stall_number} · last seen ${daysAgo(s.reported_at)}</div>
             </div>
-            <span class="badge unknown">?</span>
-          </div>`).join('');
+            <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">
+              <button class="quick-btn open" onclick="quickReport(${s.id}, '${s.stall_number}', '${sn}', 'open')">✓ Open</button>
+              <button class="quick-btn closed" onclick="quickReport(${s.id}, '${s.stall_number}', '${sn}', 'closed')">✕ Closed</button>
+            </div>
+          </div>`;
+        }).join('');
       }
 
       html += `<button class="report-btn" onclick="showView('report')">+ Report a stall status</button>`;

@@ -197,7 +197,10 @@
     return isClosed ? record : null;
   }
 
-  function today() { return new Date().toISOString().split('T')[0]; }
+  function today() {
+  const sgt = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return sgt.toISOString().split('T')[0];
+}
 
   function formatTime(ts) {
     return new Date(ts).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: true });

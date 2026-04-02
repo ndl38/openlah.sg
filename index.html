@@ -96,7 +96,7 @@
     </div>
     <div class="pad">
       <div class="section-label" id="results-label">Most Active Today</div>
-      <div class="list" id="centres-list"><div class="loading">Loading hawker centres...</div></div>
+      <div class="list" id="centres-list"><div class="loading">Checking centre status...</div></div>
     </div>
     <div class="footer"><div class="footer-text">Updated daily · Resets midnight</div></div>
   </div>
@@ -505,7 +505,10 @@
     }, 2000);
   }
 
-  fetchNEAClosures().then(() => loadCentres());
+  fetchNEAClosures().then(() => {
+    document.getElementById('centres-list').innerHTML = '<div class="loading">Loading hawker centres...</div>';
+    loadCentres();
+  });
 </script>
 </body>
 </html>

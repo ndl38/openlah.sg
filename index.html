@@ -65,6 +65,9 @@
   .report-sub { font-size: 12px; color: #bbb; margin-bottom: 32px; }
   .empty { padding: 24px 16px; background: #fff; border-radius: 10px; text-align: center; font-size: 13px; color: #ccc; }
   .loading { padding: 24px 16px; text-align: center; font-size: 12px; color: #ccc; letter-spacing: 0.06em; }
+  .loading-nea { padding: 24px 16px; text-align: center; font-size: 12px; color: #C84B2F; letter-spacing: 0.06em; }
+  .loading-nea::after { content: ''; animation: dots 1.2s steps(3, end) infinite; }
+  @keyframes dots { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
   .clear-btn { color: #ccc; font-size: 20px; background: none; border: none; cursor: pointer; }
   .badge-cleaning { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; font-weight: 500; color: #7B4F00; background: #FFF3CD; flex-shrink: 0; margin-left: 12px; }
   .centre-row.cleaning { opacity: 0.7; }
@@ -96,7 +99,7 @@
     </div>
     <div class="pad">
       <div class="section-label" id="results-label">Most Active Today</div>
-      <div class="list" id="centres-list"><div class="loading">Checking centre status...</div></div>
+      <div class="list" id="centres-list"><div class="loading-nea">Checking centre status</div></div>
     </div>
     <div class="footer"><div class="footer-text">Updated daily · Resets midnight</div></div>
   </div>

@@ -505,7 +505,7 @@
     }, 2000);
   }
 
-  fetchNEAClosures().then(() => {
+  Promise.all([fetchNEAClosures(), new Promise(r => setTimeout(r, 2000))]).then(() => {
     document.getElementById('centres-list').innerHTML = '<div class="loading">Loading hawker centres...</div>';
     loadCentres();
   });

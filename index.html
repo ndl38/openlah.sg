@@ -278,8 +278,14 @@
       });
       const dateStr = windowsWithReason ? `${formatNEADate(windowsWithReason.start)} – ${formatNEADate(windowsWithReason.end)}` : '';
       const reason = windowsWithReason ? windowsWithReason.reason : '';
+      const matched = allCentres.find(c => {
+        const neaName = (r.name || '').toLowerCase();
+        const ourName = c.name.toLowerCase();
+        return neaName === ourName || neaName.includes(ourName.substring(0, 15)) || ourName.includes(neaName.substring(0, 15));
+      });
+      const displayName = matched ? matched.name : r.name;
       return `<div class="cleaning-dropdown-item">
-        <div>${r.name}</div>
+        <div>${displayName}</div>
         <div class="cleaning-dropdown-dates">${reason} · ${dateStr}</div>
       </div>`;
     }).join('');
@@ -325,6 +331,7 @@
       };
     }).sort((a, b) => b.reportCount - a.reportCount);
     renderCentres(allCentres);
+    renderCleaningSummary();
   }
 
   function renderCentres(list) {
@@ -589,7 +596,6 @@
 
   Promise.all([fetchNEAClosures(), new Promise(r => setTimeout(r, 2000))]).then(() => {
     document.getElementById('centres-list').innerHTML = '<div class="loading">Loading hawker centres...</div>';
-    renderCleaningSummary();
     loadCentres();
   });
 </script>

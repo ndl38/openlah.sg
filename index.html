@@ -76,6 +76,15 @@
   .quick-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-family: 'DM Mono', monospace; cursor: pointer; transition: all 0.15s; }
   .quick-btn.open { border: 1.5px solid #2D6A4F; color: #2D6A4F; background: #fff; }
   .quick-btn.closed { border: 1.5px solid #9B2226; color: #9B2226; background: #fff; }
+  .cleaning-summary { margin-top: 14px; background: #FFF3CD; border: 1.5px solid #FFE08A; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .cleaning-summary:active { background: #FFE8A0; }
+  .cleaning-summary-text { font-size: 12px; color: #7B4F00; }
+  .cleaning-summary-arrow { font-size: 12px; color: #7B4F00; }
+  .cleaning-dropdown { background: #FFF3CD; border: 1.5px solid #FFE08A; border-top: none; border-radius: 0 0 10px 10px; padding: 0 14px; overflow: hidden; max-height: 0; transition: max-height 0.25s ease, padding 0.25s ease; }
+  .cleaning-dropdown.open { max-height: 400px; padding: 8px 14px 12px; }
+  .cleaning-dropdown-item { font-size: 11px; color: #7B4F00; padding: 4px 0; border-bottom: 1px solid #FFE08A; }
+  .cleaning-dropdown-item:last-child { border-bottom: none; }
+  .cleaning-dropdown-dates { font-size: 10px; color: #A0720A; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -87,6 +96,11 @@
       <div class="label">Singapore Hawker Tracker</div>
       <div class="logo">Open<span>Lah</span></div>
       <div class="tagline">Check before you go. Report when you're there.</div>
+      <div id="cleaning-summary" class="cleaning-summary" onclick="toggleCleaningDropdown()" style="display:none">
+        <span class="cleaning-summary-text" id="cleaning-summary-text"></span>
+        <span class="cleaning-summary-arrow" id="cleaning-arrow">▾</span>
+      </div>
+      <div id="cleaning-dropdown" class="cleaning-dropdown"></div>
     </div>
     <div class="pad">
       <button class="btn-primary" onclick="useMyLocation()">📍 Use My Location</button>
@@ -169,6 +183,14 @@
     } catch (e) { console.log('NEA closure data unavailable', e); }
   }
 
+  function formatNEADate(str) {
+    if (!str || str === 'NA' || str === 'nil' || str === 'TBC') return str;
+    const parts = str.split('/');
+    if (parts.length !== 3) return str;
+    const date = new Date(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+    return date.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+  }
+
   function parseNEADate(str) {
     if (!str || str === 'NA' || str === 'nil' || str === 'TBC') return null;
     const parts = str.split('/');
@@ -218,6 +240,63 @@
 
   function cleanAddress(addr) {
     return (addr || '').replace(/,?\s*Singapore\s*\d*/g, '').trim();
+  }
+
+  function renderCleaningSummary() {
+    const todayStr = today();
+    const closed = neaClosures.filter(r => {
+      const windows = [
+        { start: r.q1_cleaningstartdate, end: r.q1_cleaningenddate },
+        { start: r.q2_cleaningstartdate, end: r.q2_cleaningenddate },
+        { start: r.q3_cleaningstartdate, end: r.q3_cleaningenddate },
+        { start: r.q4_cleaningstartdate, end: r.q4_cleaningenddate },
+        { start: r.other_works_startdate, end: r.other_works_enddate },
+      ];
+      return windows.some(w => {
+        const start = parseNEADate(w.start);
+        const end = parseNEADate(w.end);
+        if (!start || !end) return false;
+        return todayStr >= start && todayStr <= end;
+      });
+    });
+    if (closed.length === 0) return;
+    const summary = document.getElementById('cleaning-summary');
+    const summaryText = document.getElementById('cleaning-summary-text');
+    const dropdown = document.getElementById('cleaning-dropdown');
+    summaryText.textContent = `🧹 ${closed.length} centre${closed.length > 1 ? 's' : ''} closed today`;
+    dropdown.innerHTML = closed.map(r => {
+      const windowsWithReason = [
+        { start: r.q1_cleaningstartdate, end: r.q1_cleaningenddate, reason: 'Cleaning' },
+        { start: r.q2_cleaningstartdate, end: r.q2_cleaningenddate, reason: 'Cleaning' },
+        { start: r.q3_cleaningstartdate, end: r.q3_cleaningenddate, reason: 'Cleaning' },
+        { start: r.q4_cleaningstartdate, end: r.q4_cleaningenddate, reason: 'Cleaning' },
+        { start: r.other_works_startdate, end: r.other_works_enddate, reason: 'Repairs & Renovation' },
+      ].find(w => {
+        const start = parseNEADate(w.start);
+        const end = parseNEADate(w.end);
+        return start && end && todayStr >= start && todayStr <= end;
+      });
+      const dateStr = windowsWithReason ? `${formatNEADate(windowsWithReason.start)} – ${formatNEADate(windowsWithReason.end)}` : '';
+      const reason = windowsWithReason ? windowsWithReason.reason : '';
+      return `<div class="cleaning-dropdown-item">
+        <div>${r.name}</div>
+        <div class="cleaning-dropdown-dates">${reason} · ${dateStr}</div>
+      </div>`;
+    }).join('');
+    summary.style.display = 'flex';
+  }
+
+  function toggleCleaningDropdown() {
+    const dropdown = document.getElementById('cleaning-dropdown');
+    const arrow = document.getElementById('cleaning-arrow');
+    const isOpen = dropdown.classList.contains('open');
+    dropdown.classList.toggle('open', !isOpen);
+    arrow.textContent = isOpen ? '▾' : '▴';
+    if (!isOpen) {
+      document.getElementById('cleaning-summary').style.borderRadius = '10px 10px 0 0';
+    } else {
+      document.getElementById('cleaning-summary').style.borderRadius = '10px';
+    }
   }
 
   function showView(id) {
@@ -510,6 +589,7 @@
 
   Promise.all([fetchNEAClosures(), new Promise(r => setTimeout(r, 2000))]).then(() => {
     document.getElementById('centres-list').innerHTML = '<div class="loading">Loading hawker centres...</div>';
+    renderCleaningSummary();
     loadCentres();
   });
 </script>

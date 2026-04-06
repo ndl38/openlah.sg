@@ -277,7 +277,15 @@
         return start && end && todayStr >= start && todayStr <= end;
       });
       const dateStr = windowsWithReason ? `${formatNEADate(windowsWithReason.start)} – ${formatNEADate(windowsWithReason.end)}` : '';
-      const reason = windowsWithReason ? windowsWithReason.reason : '';
+      let reason = windowsWithReason ? windowsWithReason.reason : '';
+      if (windowsWithReason) {
+        const start = parseNEADate(windowsWithReason.start);
+        const end = parseNEADate(windowsWithReason.end);
+        if (start && end) {
+          const days = (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24);
+          if (days > 30) reason = 'Long-term closure';
+        }
+      }
       const matched = allCentres.find(c => {
         const neaName = (r.name || '').toLowerCase();
         const ourName = c.name.toLowerCase();
